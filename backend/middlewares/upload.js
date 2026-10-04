@@ -17,4 +17,15 @@ function uploadBufferToCloudinary(buffer, folder) {
   });
 }
 
-module.exports = { upload, uploadBufferToCloudinary };
+// Borrado "best effort": un fallo en Cloudinary no debe bloquear la operación principal.
+async function deleteFromCloudinary(publicIds) {
+  await Promise.all(
+    (publicIds || []).filter(Boolean).map((publicId) =>
+      cloudinary.uploader.destroy(publicId).catch((err) => {
+        console.error(`No se pudo borrar la imagen ${publicId} de Cloudinary:`, err.message);
+      })
+    )
+  );
+}
+
+module.exports = { upload, uploadBufferToCloudinary, deleteFromCloudinary };

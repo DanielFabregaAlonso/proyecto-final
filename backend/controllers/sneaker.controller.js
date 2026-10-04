@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const Sneaker = require('../models/Sneaker');
-const { uploadBufferToCloudinary } = require('../middlewares/upload');
+const { uploadBufferToCloudinary, deleteFromCloudinary } = require('../middlewares/upload');
 
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -72,24 +72,34 @@ async function createSneaker(req, res, next) {
     }
 
     const images = [];
+    const imagePublicIds = [];
     if (req.file) {
       const result = await uploadBufferToCloudinary(req.file.buffer, 'kickz/sneakers');
       images.push(result.secure_url);
+      imagePublicIds.push(result.public_id);
     }
 
-    const sneaker = await Sneaker.create({
-      sku,
-      name,
-      brand,
-      category,
-      gender,
-      price: Number(price),
-      color,
-      description,
-      featured: featured === 'true' || featured === true,
-      sizes,
-      images,
-    });
+    let sneaker;
+    try {
+      sneaker = await Sneaker.create({
+        sku,
+        name,
+        brand,
+        category,
+        gender,
+        price: Number(price),
+        color,
+        description,
+        featured: featured === 'true' || featured === true,
+        sizes,
+        images,
+        imagePublicIds,
+      });
+    } catch (createErr) {
+      // Si falla el alta (p. ej. SKU duplicado), la imagen recién subida quedaría huérfana.
+      await deleteFromCloudinary(imagePublicIds);
+      throw createErr;
+    }
     res.status(201).json({ sneaker });
   } catch (err) {
     if (err.code === 11000) {
@@ -105,7 +115,7 @@ async function updateSneaker(req, res, next) {
       return res.status(404).json({ message: 'Zapatilla no encontrada' });
     }
 
-    const sneaker = await Sneaker.findById(req.params.id);
+    const sneaker = await Sneaker.findById(req.params.id).select('+imagePublicIds');
     if (!sneaker) return res.status(404).json({ message: 'Zapatilla no encontrada' });
 
     const fields = ['name', 'brand', 'category', 'gender', 'color', 'description'];
@@ -123,12 +133,24 @@ async function updateSneaker(req, res, next) {
         return res.status(400).json({ message: 'El campo sizes debe ser un JSON valido' });
       }
     }
+    let previousPublicIds = [];
+    let newPublicId = null;
     if (req.file) {
       const result = await uploadBufferToCloudinary(req.file.buffer, 'kickz/sneakers');
-      sneaker.images.push(result.secure_url);
+      newPublicId = result.public_id;
+      previousPublicIds = [...sneaker.imagePublicIds];
+      // La nueva foto sustituye a la anterior (el frontend muestra images[0]).
+      sneaker.images = [result.secure_url];
+      sneaker.imagePublicIds = [result.public_id];
     }
 
-    await sneaker.save();
+    try {
+      await sneaker.save();
+    } catch (saveErr) {
+      await deleteFromCloudinary(newPublicId ? [newPublicId] : []);
+      throw saveErr;
+    }
+    await deleteFromCloudinary(previousPublicIds);
     res.json({ sneaker });
   } catch (err) {
     if (err.name === 'CastError') {
@@ -144,8 +166,9 @@ async function deleteSneaker(req, res, next) {
       return res.status(404).json({ message: 'Zapatilla no encontrada' });
     }
 
-    const sneaker = await Sneaker.findByIdAndDelete(req.params.id);
+    const sneaker = await Sneaker.findByIdAndDelete(req.params.id).select('+imagePublicIds');
     if (!sneaker) return res.status(404).json({ message: 'Zapatilla no encontrada' });
+    await deleteFromCloudinary(sneaker.imagePublicIds);
     res.json({ message: 'Zapatilla eliminada' });
   } catch (err) {
     if (err.name === 'CastError') {

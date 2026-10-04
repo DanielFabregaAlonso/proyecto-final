@@ -24,6 +24,8 @@ const sneakerSchema = new mongoose.Schema(
     sizes: { type: [sizeSchema], default: [] },
     description: { type: String, default: '' },
     images: { type: [String], default: [] },
+    // public_id de Cloudinary de las imágenes subidas desde la API (las del seed no tienen).
+    imagePublicIds: { type: [String], default: [], select: false },
     featured: { type: Boolean, default: false },
   },
   { timestamps: true }

@@ -11,7 +11,20 @@ function isAddressComplete(shippingAddress) {
   });
 }
 
+// Devuelve al stock las líneas ya descontadas (compensación sin transacciones).
+function restoreStock(orderItems) {
+  return Promise.all(
+    orderItems.map((oi) =>
+      Sneaker.updateOne(
+        { _id: oi.sneaker, 'sizes.size': oi.size },
+        { $inc: { 'sizes.$.stock': oi.quantity } }
+      )
+    )
+  );
+}
+
 async function createOrder(req, res, next) {
+  const orderItems = [];
   try {
     const { items, shippingAddress } = req.body;
     if (!Array.isArray(items) || items.length === 0) {
@@ -34,10 +47,8 @@ async function createOrder(req, res, next) {
     // Pass 2: atomically decrement stock per item. Each update re-reads current stock at
     // write time, so this naturally handles duplicate line items for the same sneaker/size
     // within this request as well as concurrent checkouts from other requests.
-    // Known limitation: if a later item's update fails after an earlier item's update
-    // already succeeded, the earlier decrement is not automatically rolled back (no Mongo
-    // transaction is used here, matching the plan's scope).
-    const orderItems = [];
+    // Sin transacción: si un artículo posterior falla, se devuelve al stock lo ya descontado
+    // (compensación manual con $inc positivo) antes de responder con el error.
     let total = 0;
     for (let i = 0; i < items.length; i += 1) {
       const item = items[i];
@@ -51,6 +62,7 @@ async function createOrder(req, res, next) {
         { new: true }
       );
       if (!updated) {
+        await restoreStock(orderItems);
         const exists = await Sneaker.exists({ _id: item.sneakerId });
         if (!exists) {
           return res.status(404).json({ message: `Zapatilla no encontrada: ${item.sneakerId}` });
@@ -76,6 +88,8 @@ async function createOrder(req, res, next) {
 
     res.status(201).json({ order });
   } catch (err) {
+    // Error inesperado (id inválido, fallo al crear el pedido...): no dejar stock descontado.
+    await restoreStock(orderItems).catch(() => {});
     next(err);
   }
 }
