@@ -37,6 +37,8 @@ API REST para Kickz, una tienda online de zapatillas deportivas. Construida con 
 
 ## Despliegue en Render
 
+API en producción: https://proyecto-final-7ojh.onrender.com/api
+
 1. Nuevo Web Service apuntando a este repositorio, con "Root Directory" = `backend`.
 2. Build command: `npm install`. Start command: `npm start`.
 3. Variables de entorno: las mismas que `.env` (`MONGODB_URI`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `CORS_ORIGIN`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`), con `CORS_ORIGIN` apuntando al dominio final de Vercel.

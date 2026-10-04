@@ -34,6 +34,6 @@ SPA de Kickz, una tienda online de zapatillas deportivas. Construida con React +
 
 1. Nuevo proyecto apuntando a este repositorio, con "Root Directory" = `frontend`.
 2. Framework preset: Vite (autodetectado). Build command: `npm run build`. Output directory: `dist`.
-3. Variable de entorno: `VITE_API_URL` apuntando a la URL pública del backend en Render (ej. `https://kickz-api.onrender.com/api`).
+3. Variable de entorno: `VITE_API_URL` apuntando a la URL pública del backend en Render (en producción: `https://proyecto-final-7ojh.onrender.com/api`).
 4. `vercel.json` ya incluye el rewrite necesario para que las rutas de React Router no den 404 al recargar.
 5. Actualiza `CORS_ORIGIN` en el backend desplegado (Render) para incluir el dominio de Vercel — recuerda que los preview deployments de Vercel tienen dominios distintos cada vez, así que puede que necesites una lista separada por comas o un patrón más permisivo.

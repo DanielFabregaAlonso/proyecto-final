@@ -61,6 +61,9 @@ npm run dev              # http://localhost:5173
 
 ## Despliegue
 
+- **Frontend (Vercel):** https://proyecto-final-woad-six.vercel.app
+- **API (Render):** https://proyecto-final-7ojh.onrender.com/api — plan gratuito, la primera petición puede tardar ~50 s en despertar.
+
 - **Backend → Render**: Root Directory `backend`, build `npm install`, start `npm start`. Detalles en [backend/README.md](backend/README.md#despliegue-en-render).
 - **Frontend → Vercel**: Root Directory `frontend`, variable `VITE_API_URL` apuntando al backend en Render. Detalles en [frontend/README.md](frontend/README.md#despliegue-en-vercel).
 
